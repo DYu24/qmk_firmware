@@ -10,6 +10,22 @@ enum ctrl_keycodes {
     MD_BOOT,               //Restart into bootloader after hold timeout
 };
 
+enum ctrl_rgb_mode {
+    RGB_MODE_ALL,
+    RGB_MODE_KEYLIGHT_AND_MODIFIER,
+    RGB_MODE_UNDERGLOW,
+    RGB_MODE_NONE,
+};
+
+typedef union {
+    uint32_t raw;
+    struct {
+        uint8_t rgb_mode :8;
+    };
+} ctrl_config_t;
+
+ctrl_config_t ctrl_config;
+
 keymap_config_t keymap_config;
 
 const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
@@ -42,12 +58,34 @@ const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
 };
 
 // Runs just one time when the keyboard initializes.
-void matrix_init_user(void) {
-};
+void matrix_init_user(void) { };
 
 // Runs constantly in the background, in a loop.
-void matrix_scan_user(void) {
-};
+void matrix_scan_user(void) { };
+
+// Keyboard post initialization
+void keyboard_post_init_kb(void) {
+    // Set pre-configured RGB mode
+    ctrl_config.raw = eeconfig_read_user();
+    switch (ctrl_config.rgb_mode) {
+        case RGB_MODE_ALL:
+            rgb_matrix_set_flags(LED_FLAG_ALL);
+            rgb_matrix_enable_noeeprom();
+            break;
+        case RGB_MODE_KEYLIGHT_AND_MODIFIER:
+            rgb_matrix_set_flags(LED_FLAG_KEYLIGHT | LED_FLAG_MODIFIER);
+            rgb_matrix_set_color_all(0, 0, 0);
+            break;
+        case RGB_MODE_UNDERGLOW:
+            rgb_matrix_set_flags(LED_FLAG_UNDERGLOW);
+            rgb_matrix_set_color_all(0, 0, 0);
+            break;
+        case RGB_MODE_NONE:
+            rgb_matrix_set_flags(LED_FLAG_NONE);
+            rgb_matrix_disable_noeeprom();
+            break;
+    }
+}
 
 #define MODS_SHIFT  (get_mods() & MOD_MASK_SHIFT)
 #define MODS_CTRL   (get_mods() & MOD_MASK_CTRL)
@@ -98,28 +136,34 @@ bool process_record_user(uint16_t keycode, keyrecord_t *record) {
             return false;
         case RGB_TOG:
             if (record->event.pressed) {
-              switch (rgb_matrix_get_flags()) {
-                case LED_FLAG_ALL: {
-                    rgb_matrix_set_flags(LED_FLAG_KEYLIGHT | LED_FLAG_MODIFIER);
-                    rgb_matrix_set_color_all(0, 0, 0);
-                  }
-                  break;
-                case LED_FLAG_KEYLIGHT | LED_FLAG_MODIFIER: {
-                    rgb_matrix_set_flags(LED_FLAG_UNDERGLOW);
-                    rgb_matrix_set_color_all(0, 0, 0);
-                  }
-                  break;
-                case LED_FLAG_UNDERGLOW: {
-                    rgb_matrix_set_flags(LED_FLAG_NONE);
-                    rgb_matrix_disable_noeeprom();
-                  }
-                  break;
-                default: {
-                    rgb_matrix_set_flags(LED_FLAG_ALL);
-                    rgb_matrix_enable_noeeprom();
-                  }
-                  break;
-              }
+                switch (rgb_matrix_get_flags()) {
+                    case LED_FLAG_ALL: {
+                        ctrl_config.rgb_mode = RGB_MODE_KEYLIGHT_AND_MODIFIER;
+                        rgb_matrix_set_flags(LED_FLAG_KEYLIGHT | LED_FLAG_MODIFIER);
+                        rgb_matrix_set_color_all(0, 0, 0);
+                        break;
+                    }
+                    case LED_FLAG_KEYLIGHT | LED_FLAG_MODIFIER: {
+                        ctrl_config.rgb_mode = RGB_MODE_UNDERGLOW;
+                        rgb_matrix_set_flags(LED_FLAG_UNDERGLOW);
+                        rgb_matrix_set_color_all(0, 0, 0);
+                        break;
+                    }
+
+                    case LED_FLAG_UNDERGLOW: {
+                        ctrl_config.rgb_mode = RGB_MODE_NONE;
+                        rgb_matrix_set_flags(LED_FLAG_NONE);
+                        rgb_matrix_disable_noeeprom();
+                        break;
+                    }
+                    default: {
+                        ctrl_config.rgb_mode = RGB_MODE_ALL;
+                        rgb_matrix_set_flags(LED_FLAG_ALL);
+                        rgb_matrix_enable_noeeprom();
+                        break;
+                    }
+                }
+                eeconfig_update_user(ctrl_config.raw);
             }
             return false;
         default:
