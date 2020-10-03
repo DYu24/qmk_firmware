@@ -24,8 +24,6 @@ typedef union {
     };
 } alt_config_t;
 
-keymap_config_t keymap_config;
-
 alt_config_t alt_config;
 
 const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
@@ -53,12 +51,6 @@ const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
     ),
     */
 };
-
-// Runs just one time when the keyboard initializes.
-void matrix_init_user(void) { };
-
-// Runs constantly in the background, in a loop.
-void matrix_scan_user(void) { };
 
 // Keyboard post initialization
 void keyboard_post_init_kb(void) {
