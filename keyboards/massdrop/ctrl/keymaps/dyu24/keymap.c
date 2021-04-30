@@ -87,6 +87,14 @@ void keyboard_post_init_kb(void) {
     }
 }
 
+void suspend_power_down_user(void) {
+    rgb_matrix_set_suspend_state(true);
+}
+
+void suspend_wakeup_init_user(void) {
+    rgb_matrix_set_suspend_state(false);
+}
+
 // layer_state_t layer_state_set_user(layer_state_t state) {
 //     switch(get_highest_layer(state)) {
 
