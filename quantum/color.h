@@ -63,6 +63,9 @@ typedef struct PACKED {
 #    pragma pack(pop)
 #endif
 
+HSV createUsableHSV(float h, float s, float v);
+HSV rgb_to_hsv(float r, float g, float b);
+
 RGB hsv_to_rgb(HSV hsv);
 RGB hsv_to_rgb_nocie(HSV hsv);
 #ifdef RGBW

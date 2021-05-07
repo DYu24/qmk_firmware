@@ -17,6 +17,7 @@
 #include "color.h"
 #include "led_tables.h"
 #include "progmem.h"
+#include <math.h>
 
 RGB hsv_to_rgb_impl(HSV hsv, bool use_cie) {
     RGB      rgb;
@@ -119,3 +120,55 @@ void convert_rgb_to_rgbw(LED_TYPE *led) {
     led->b -= led->w;
 }
 #endif
+
+HSV createUsableHSV(float h, float s, float v) {
+    uint8_t h8 = (h / 360) * 255;
+    uint8_t s8 = (s / 100) * 255;
+    uint8_t v8 = (v / 100) * 255;
+
+    HSV hsv = {h8, s8, v8};
+    return hsv;
+}
+
+// Convert RGB to HSV
+// Adapted from https://www.tutorialspoint.com/c-program-to-change-rgb-color-model-to-hsv-color-model
+float max(float a, float b, float c) {
+   return ((a > b)? (a > c ? a : c) : (b > c ? b : c));
+}
+
+float min(float a, float b, float c) {
+   return ((a < b)? (a < c ? a : c) : (b < c ? b : c));
+}
+
+HSV rgb_to_hsv(float r, float g, float b) {
+    // R, G, B values are divided by 255
+    // to change the range from 0..255 to 0..1:
+    float h, s, v;
+    r /= 255;
+    g /= 255;
+    b /= 255;
+    float cmax = max(r, g, b); // maximum of r, g, b
+    float cmin = min(r, g, b); // minimum of r, g, b
+    float diff = cmax-cmin; // diff of cmax and cmin.
+    if (cmax == cmin)
+      h = 0;
+    else if (cmax == r)
+      h = fmod((60 * ((g - b) / diff) + 360), 360.0);
+    else if (cmax == g)
+      h = fmod((60 * ((b - r) / diff) + 120), 360.0);
+    else if (cmax == b)
+      h = fmod((60 * ((r - g) / diff) + 240), 360.0);
+    else
+      h = 0;
+
+    // if cmax equal zero
+    if (cmax == 0)
+        s = 0;
+    else
+        s = (diff / cmax) * 100;
+
+    // compute v
+    v = cmax * 100;
+
+    return createUsableHSV(h, s, v);
+}
