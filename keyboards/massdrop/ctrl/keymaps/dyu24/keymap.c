@@ -9,6 +9,8 @@ enum ctrl_keycodes {
     DBG_KBD,               //DEBUG Toggle Keyboard Prints
     DBG_MOU,               //DEBUG Toggle Mouse Prints
     MD_BOOT,               //Restart into bootloader after hold timeout
+    EMOJI_WIN,             //Emoji picker shortcut for Windows (Win + .)
+    EMOJI_MAC,              //Emoji picker shortcut for Mac (Ctrl + Command + Space)
 };
 
 enum ctrl_rgb_mode {
@@ -23,6 +25,7 @@ typedef union {
     struct {
         uint8_t rgb_mode :8;
         uint8_t last_rgb_mode :8;
+        // uint8_t active_layer :8;
     };
 } ctrl_config_t;
 
@@ -48,7 +51,7 @@ const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
         _______, _______, _______,                   _______,                            _______, _______, _______, _______,            _______, _______, _______ \
     ),
     [2] = LAYOUT(
-        _______, KC_MUTE, KC_VOLD, KC_VOLU, KC_MPLY, KC_MPRV, KC_MNXT, KC_BRID, KC_BRIU, _______, _______, _______, _______,            _______, _______, _______, \
+        _______, KC_MUTE, KC_VOLD, KC_VOLU, KC_MPLY, KC_MPRV, KC_MNXT, KC_BRID, KC_BRIU, RGB_VAD, RGB_VAI, EMOJI_WIN, EMOJI_MAC,            _______, _______, _______, \
         _______, _______, _______, _______, _______, _______, _______, _______, _______, _______, _______, _______, _______, _______,   _______, _______, _______, \
         _______, _______, _______, _______, _______, _______, _______, _______, _______, _______, _______, _______, _______, _______,   _______, _______, _______, \
         _______, _______, _______, _______, _______, _______, _______, _______, _______, _______, _______, _______, _______, \
@@ -65,8 +68,9 @@ void matrix_scan_user(void) { };
 
 // Keyboard post initialization
 void keyboard_post_init_kb(void) {
-    // Set pre-configured RGB mode
+    // Set pre-configured RGB mode and active layer
     ctrl_config.raw = eeconfig_read_user();
+    // layer_move(ctrl_config.active_layer);
     switch (ctrl_config.rgb_mode) {
         case RGB_MODE_ALL:
             rgb_matrix_set_flags(LED_FLAG_ALL);
@@ -96,16 +100,23 @@ void suspend_wakeup_init_user(void) {
 }
 
 // layer_state_t layer_state_set_user(layer_state_t state) {
+//     // uint8_t layer = get_highest_layer(state);
+//     // ctrl_config.active_layer = layer;
 //     switch(get_highest_layer(state)) {
 //         case 0:
 //             // turn off light
+//             rgb_matrix_set_color(14, 255, 114, 118);
+//             ctrl_config.active_layer = 0;
 //             break;
 //         case 1:
 //             break;
 //         case 2:
 //             // turn on light
+//             rgb_matrix_set_color(14, 24, 215, 204);
+//             ctrl_config.active_layer = 2;
 //             break;
 //     }
+//     eeconfig_update_user(ctrl_config.raw);
 //     return state;
 // }
 
@@ -234,6 +245,16 @@ bool process_record_user(uint16_t keycode, keyrecord_t *record) {
                     }
                 }
                 eeconfig_update_user(ctrl_config.raw);
+            }
+            return false;
+        case EMOJI_WIN:
+            if (record->event.pressed) {
+                SEND_STRING(SS_LGUI("."));
+            }
+            return false;
+        case EMOJI_MAC:
+            if (record->event.pressed) {
+                SEND_STRING(SS_DOWN(X_LCTRL) SS_LGUI(" ") SS_UP(X_LCTRL));
             }
             return false;
         default:
