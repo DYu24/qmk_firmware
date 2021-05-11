@@ -25,7 +25,6 @@ typedef union {
     struct {
         uint8_t rgb_mode :8;
         uint8_t last_rgb_mode :8;
-        // uint8_t active_layer :8;
     };
 } ctrl_config_t;
 
@@ -33,9 +32,11 @@ ctrl_config_t ctrl_config;
 
 keymap_config_t keymap_config;
 
+bool layer_state_changed = false;
+
 const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
     [0] = LAYOUT(
-        KC_ESC,  KC_F1,   KC_F2,   KC_F3,   KC_F4,   KC_F5,   KC_F6,   KC_F7,   KC_F8,   KC_F9,   KC_F10,  KC_F11,  KC_F12,             KC_PSCR, TG(2), KC_PAUS, \
+        KC_ESC,  KC_MUTE, KC_VOLD, KC_VOLU, KC_MPLY, KC_MPRV, KC_MNXT, KC_BRID, KC_BRIU, RGB_VAD, RGB_VAI, EMOJI_WIN, EMOJI_MAC,        KC_PSCR, TG(2), KC_PAUS, \
         KC_GRV,  KC_1,    KC_2,    KC_3,    KC_4,    KC_5,    KC_6,    KC_7,    KC_8,    KC_9,    KC_0,    KC_MINS, KC_EQL,  KC_BSPC,   KC_INS,  KC_HOME, KC_PGUP, \
         KC_TAB,  KC_Q,    KC_W,    KC_E,    KC_R,    KC_T,    KC_Y,    KC_U,    KC_I,    KC_O,    KC_P,    KC_LBRC, KC_RBRC, KC_BSLS,   KC_DEL,  KC_END,  KC_PGDN, \
         KC_CAPS, KC_A,    KC_S,    KC_D,    KC_F,    KC_G,    KC_H,    KC_J,    KC_K,    KC_L,    KC_SCLN, KC_QUOT, KC_ENT, \
@@ -51,7 +52,7 @@ const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
         _______, _______, _______,                   _______,                            _______, _______, _______, _______,            _______, _______, _______ \
     ),
     [2] = LAYOUT(
-        _______, KC_MUTE, KC_VOLD, KC_VOLU, KC_MPLY, KC_MPRV, KC_MNXT, KC_BRID, KC_BRIU, RGB_VAD, RGB_VAI, EMOJI_WIN, EMOJI_MAC,            _______, _______, _______, \
+        _______, KC_F1,   KC_F2,   KC_F3,   KC_F4,   KC_F5,   KC_F6,   KC_F7,   KC_F8,   KC_F9,   KC_F10,  KC_F11,  KC_F12,            _______, _______, _______, \
         _______, _______, _______, _______, _______, _______, _______, _______, _______, _______, _______, _______, _______, _______,   _______, _______, _______, \
         _______, _______, _______, _______, _______, _______, _______, _______, _______, _______, _______, _______, _______, _______,   _______, _______, _______, \
         _______, _______, _______, _______, _______, _______, _______, _______, _______, _______, _______, _______, _______, \
@@ -70,7 +71,6 @@ void matrix_scan_user(void) { };
 void keyboard_post_init_kb(void) {
     // Set pre-configured RGB mode and active layer
     ctrl_config.raw = eeconfig_read_user();
-    // layer_move(ctrl_config.active_layer);
     switch (ctrl_config.rgb_mode) {
         case RGB_MODE_ALL:
             rgb_matrix_set_flags(LED_FLAG_ALL);
@@ -99,26 +99,29 @@ void suspend_wakeup_init_user(void) {
     rgb_matrix_set_suspend_state(false);
 }
 
-// layer_state_t layer_state_set_user(layer_state_t state) {
-//     // uint8_t layer = get_highest_layer(state);
-//     // ctrl_config.active_layer = layer;
-//     switch(get_highest_layer(state)) {
-//         case 0:
-//             // turn off light
-//             rgb_matrix_set_color(14, 255, 114, 118);
-//             ctrl_config.active_layer = 0;
-//             break;
-//         case 1:
-//             break;
-//         case 2:
-//             // turn on light
-//             rgb_matrix_set_color(14, 24, 215, 204);
-//             ctrl_config.active_layer = 2;
-//             break;
-//     }
-//     eeconfig_update_user(ctrl_config.raw);
-//     return state;
-// }
+void set_opposite_color(uint8_t led) {
+    RGB rgb = hsv_to_rgb(rgb_matrix_config.hsv);
+    rgb_matrix_set_color(led, 255 - rgb.r, 255 - rgb.g, 255 - rgb.b);
+}
+
+void rgb_matrix_indicators_user(void) {
+    if (!g_suspend_state && rgb_matrix_config.enable) {
+        switch(get_highest_layer(layer_state)) {
+            case 0:
+                if (layer_state_changed) {
+                    set_opposite_color(14);
+                    layer_state_changed = false;
+                }
+                break;
+            case 2:
+                set_opposite_color(14);
+                layer_state_changed = true;
+                break;
+            default:
+                break;
+        }
+    }
+}
 
 #define MODS_SHIFT  (get_mods() & MOD_MASK_SHIFT)
 #define MODS_CTRL   (get_mods() & MOD_MASK_CTRL)
